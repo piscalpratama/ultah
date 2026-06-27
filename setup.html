@@ -434,9 +434,10 @@ async function ensureModels() {
   log('info', 'Memuat model AI…');
   try {
     await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
-      faceapi.nets.faceLandmark68TinyNet.loadFromUri('./models'),
-      faceapi.nets.faceRecognitionNet.loadFromUri('./models'),
+      const modelBase = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/models';
+      faceapi.nets.tinyFaceDetector.loadFromUri(modelBase),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelBase),
+      faceapi.nets.faceRecognitionNet.loadFromUri(modelBase),
     ]);
     modelsLoaded = true;
     log('ok', 'Model berhasil dimuat ✓');
