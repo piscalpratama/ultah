@@ -1,1 +1,563 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Setup Wajah – Birthday Lia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --navy:      #0a0a1a;
+      --navy2:     #12122a;
+      --rose-gold: #c9956c;
+      --blush:     #f5d0c5;
+      --warm-white:#fdf6f0;
+      --muted:     rgba(245,208,197,0.45);
+      --success:   #6fcf97;
+      --error:     #eb5757;
+    }
+
+    body {
+      background: var(--navy);
+      color: var(--warm-white);
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    header {
+      margin-bottom: 40px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--rose-gold);
+      text-decoration: none;
+      margin-bottom: 24px;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    .back-link:hover { opacity: 1; }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem;
+      font-weight: 300;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--blush);
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ── Steps ── */
+    .step {
+      background: var(--navy2);
+      border: 1px solid rgba(201,149,108,0.15);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 20px;
+      transition: border-color 0.3s;
+    }
+
+    .step.active  { border-color: rgba(201,149,108,0.4); }
+    .step.done    { border-color: rgba(111,207,151,0.3); }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--rose-gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--rose-gold);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .step.done .step-num {
+      background: rgba(111,207,151,0.15);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .step-title {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--warm-white);
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    /* ── Camera ── */
+    #cam-wrap {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 4/3;
+      margin-bottom: 14px;
+    }
+
+    #cam-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      display: block;
+    }
+
+    #cam-canvas-ov {
+      position: absolute;
+      inset: 0;
+      transform: scaleX(-1);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 24px;
+      border-radius: 100px;
+      border: 1px solid rgba(201,149,108,0.5);
+      background: transparent;
+      color: var(--rose-gold);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: rgba(201,149,108,0.1);
+      border-color: var(--rose-gold);
+    }
+
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-primary {
+      background: rgba(201,149,108,0.15);
+      border-color: var(--rose-gold);
+    }
+
+    .btn-success {
+      border-color: var(--success);
+      color: var(--success);
+      background: rgba(111,207,151,0.08);
+    }
+
+    .btn + .btn { margin-left: 10px; }
+
+    /* ── Photo grid ── */
+    #photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .photo-thumb {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(201,149,108,0.2);
+    }
+
+    .photo-thumb img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-thumb .status-badge {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      background: rgba(0,0,0,0.4);
+    }
+
+    /* ── Log ── */
+    #log {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.9;
+      min-height: 20px;
+    }
+
+    #log .ok   { color: var(--success); }
+    #log .err  { color: var(--error); }
+    #log .info { color: var(--rose-gold); }
+
+    /* ── File input ── */
+    #file-input { display: none; }
+
+    .upload-area {
+      border: 1px dashed rgba(201,149,108,0.3);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      margin-bottom: 14px;
+    }
+    .upload-area:hover {
+      border-color: var(--rose-gold);
+      background: rgba(201,149,108,0.04);
+    }
+
+    .upload-icon { font-size: 28px; margin-bottom: 8px; }
+    .upload-text { font-size: 13px; color: var(--muted); }
+
+    /* ── Progress ── */
+    .progress-bar {
+      height: 2px;
+      background: rgba(201,149,108,0.15);
+      border-radius: 2px;
+      margin: 12px 0;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--rose-gold), var(--blush));
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* ── Result box ── */
+    #result-box {
+      display: none;
+      background: rgba(111,207,151,0.06);
+      border: 1px solid rgba(111,207,151,0.25);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-top: 20px;
+    }
+
+    #result-box h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem;
+      font-style: italic;
+      color: var(--success);
+      margin-bottom: 8px;
+    }
+
+    #result-box p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    code {
+      font-family: monospace;
+      font-size: 12px;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: rgba(201,149,108,0.06);
+      border-left: 2px solid var(--rose-gold);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    ol { padding-left: 20px; }
+    ol li { margin-bottom: 6px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <a class="back-link" href="index.html">← Kembali ke halaman utama</a>
+    <h1>Setup <em>Wajah Lia</em></h1>
+    <p class="subtitle">
+      Halaman ini untuk mendaftarkan wajah Lia ke sistem pengenalan.<br>
+      Lakukan sekali saja — hasilnya disimpan ke <code>faces.json</code>.
+    </p>
+  </header>
+
+  <!-- STEP 1: Upload foto -->
+  <div class="step active" id="step-upload">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Upload foto Lia (3–8 foto)</div>
+    </div>
+    <p class="step-desc">
+      Pilih foto yang jelas wajahnya, berbeda ekspresi dan sudut. 
+      Makin beragam fotonya, makin akurat pengenalannya.
+    </p>
+    <input type="file" id="file-input" accept="image/*" multiple />
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">🌸</div>
+      <div class="upload-text">Klik untuk pilih foto Lia<br><small>PNG, JPG — bisa lebih dari satu</small></div>
+    </div>
+    <div id="photo-grid"></div>
+  </div>
+
+  <!-- STEP 2: Proses -->
+  <div class="step" id="step-process">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">Proses pengenalan wajah</div>
+    </div>
+    <p class="step-desc">
+      Sistem akan membaca wajah dari setiap foto dan membuat descriptor unik.
+      Ini butuh beberapa detik.
+    </p>
+    <button class="btn btn-primary" id="process-btn" disabled onclick="processFaces()">
+      Mulai Proses
+    </button>
+    <div class="progress-bar" style="display:none" id="progress-wrap">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <!-- STEP 3: Export -->
+  <div class="step" id="step-export">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Download & upload ke GitHub</div>
+    </div>
+    <p class="step-desc">
+      Download file <code>faces.json</code> lalu upload ke root repo GitHub kamu 
+      di sebelah <code>index.html</code>.
+    </p>
+    <button class="btn btn-success" id="export-btn" disabled onclick="exportJSON()">
+      Download faces.json
+    </button>
+
+    <div style="margin-top: 20px;">
+      <p class="step-desc" style="margin-bottom: 12px">Langkah selanjutnya:</p>
+      <ol>
+        <li>Download <code>faces.json</code> dari tombol di atas</li>
+        <li>Buka repo GitHub kamu</li>
+        <li>Upload <code>faces.json</code> ke root folder (sejajar <code>index.html</code>)</li>
+        <li>Buka website utama — sudah siap! 🎉</li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="result-box">
+    <h3>Siap dipakai!</h3>
+    <p>
+      File <code>faces.json</code> sudah kamu download.<br>
+      Upload ke GitHub, dan website ulang tahun Lia sudah bisa mengenali wajahnya.
+    </p>
+  </div>
+
+</div>
+
+<script>
+let uploadedFiles = [];
+let descriptors   = [];
+let modelsLoaded  = false;
+
+// ── File upload ──────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', function(e) {
+  uploadedFiles = Array.from(e.target.files);
+  renderPhotoGrid();
+  if (uploadedFiles.length >= 1) {
+    document.getElementById('process-btn').disabled = false;
+    document.getElementById('step-upload').classList.add('done');
+    document.getElementById('step-process').classList.add('active');
+  }
+});
+
+function renderPhotoGrid() {
+  const grid = document.getElementById('photo-grid');
+  grid.innerHTML = '';
+  uploadedFiles.forEach((f, i) => {
+    const url   = URL.createObjectURL(f);
+    const thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    thumb.id  = `thumb-${i}`;
+    thumb.innerHTML = `<img src="${url}" /><div class="status-badge" id="badge-${i}"></div>`;
+    grid.appendChild(thumb);
+  });
+}
+
+// ── Load models ──────────────────────────────────────────────────────────
+async function ensureModels() {
+  if (modelsLoaded) return true;
+  log('info', 'Memuat model AI…');
+  try {
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri('./models'),
+      faceapi.nets.faceRecognitionNet.loadFromUri('./models'),
+    ]);
+    modelsLoaded = true;
+    log('ok', 'Model berhasil dimuat ✓');
+    return true;
+  } catch(e) {
+    log('err', 'Gagal memuat model. Pastikan folder /models ada di repo.');
+    return false;
+  }
+}
+
+// ── Process faces ────────────────────────────────────────────────────────
+async function processFaces() {
+  const btn = document.getElementById('process-btn');
+  btn.disabled = true;
+
+  // Tunggu face-api ready
+  if (typeof faceapi === 'undefined') {
+    log('info', 'Menunggu library face-api.js…');
+    await new Promise(r => setTimeout(r, 1500));
+  }
+
+  if (typeof faceapi === 'undefined') {
+    log('err', 'Library face-api.js tidak terload. Cek koneksi internet.');
+    btn.disabled = false;
+    return;
+  }
+
+  const ok = await ensureModels();
+  if (!ok) { btn.disabled = false; return; }
+
+  descriptors = [];
+  const total = uploadedFiles.length;
+  const progWrap = document.getElementById('progress-wrap');
+  const progFill = document.getElementById('progress-fill');
+  progWrap.style.display = 'block';
+
+  for (let i = 0; i < uploadedFiles.length; i++) {
+    const f = uploadedFiles[i];
+    log('info', `Memproses foto ${i + 1}/${total}: ${f.name}…`);
+    progFill.style.width = ((i / total) * 100) + '%';
+
+    try {
+      const img  = await loadImage(f);
+      const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 });
+      const det  = await faceapi
+        .detectSingleFace(img, opts)
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+
+      if (!det) {
+        log('err', `⚠️ Tidak ada wajah ditemukan di foto ${i+1}. Skip.`);
+        document.getElementById(`badge-${i}`).textContent = '❌';
+        continue;
+      }
+
+      descriptors.push(det.descriptor);
+      document.getElementById(`badge-${i}`).textContent = '✅';
+      log('ok', `Foto ${i+1} berhasil — wajah terdeteksi ✓`);
+    } catch(e) {
+      log('err', `Error foto ${i+1}: ${e.message}`);
+      document.getElementById(`badge-${i}`).textContent = '❌';
+    }
+  }
+
+  progFill.style.width = '100%';
+
+  if (descriptors.length === 0) {
+    log('err', '❌ Tidak ada wajah yang berhasil diproses. Coba foto lain yang lebih jelas.');
+    btn.disabled = false;
+    return;
+  }
+
+  log('ok', `✨ Selesai! ${descriptors.length} dari ${total} foto berhasil.`);
+
+  document.getElementById('step-process').classList.add('done');
+  document.getElementById('step-export').classList.add('active');
+  document.getElementById('export-btn').disabled = false;
+}
+
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const url  = URL.createObjectURL(file);
+    const img  = new Image();
+    img.onload  = () => res(img);
+    img.onerror = () => rej(new Error('Gagal load gambar'));
+    img.src = url;
+  });
+}
+
+// ── Export JSON ──────────────────────────────────────────────────────────
+function exportJSON() {
+  if (descriptors.length === 0) return;
+
+  const data = [{
+    label: 'Lia',
+    descriptors: descriptors.map(d => Array.from(d))
+  }];
+
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'faces.json';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  document.getElementById('step-export').classList.add('done');
+  document.getElementById('result-box').style.display = 'block';
+  log('ok', '🎉 faces.json berhasil didownload!');
+}
+
+// ── Log helper ───────────────────────────────────────────────────────────
+function log(type, msg) {
+  const el  = document.getElementById('log');
+  const row = document.createElement('div');
+  row.className = type;
+  row.textContent = msg;
+  el.appendChild(row);
+  el.scrollTop = el.scrollHeight;
+}
+</script>
+
+</body>
+</html>
