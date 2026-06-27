@@ -699,7 +699,8 @@ function goBack() {
 
   async function loadFaceData() {
     try {
-      const r = await fetch('./faces.json');
+      const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+      const r = await fetch(base + '/faces.json');
       if (!r.ok) throw new Error();
       const data = await r.json();
       const labeled = data.map(d => new faceapi.LabeledFaceDescriptors(
@@ -714,9 +715,12 @@ function goBack() {
     status.textContent = 'Memuat model pengenalan wajah…';
     try {
       await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
-        faceapi.nets.faceLandmark68TinyNet.loadFromUri('./models'),
-        faceapi.nets.faceRecognitionNet.loadFromUri('./models'),
+      const modelBase = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/models';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(modelBase),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelBase),
+        faceapi.nets.faceRecognitionNet.loadFromUri(modelBase),
+      ]);
       ]);
       modelsLoaded = true; return true;
     } catch {
