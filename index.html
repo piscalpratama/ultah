@@ -1037,6 +1037,8 @@ function goBack() {
   async function startDetection() {
     if (detecting) return;
     detecting = true;
+    wasLiaOk = false; wasUnknown = false; detectedFrames = 0;
+    resetWords();
     const sz = { width: video.videoWidth, height: video.videoHeight };
     faceapi.matchDimensions(faceCanvas, sz);
 
@@ -1079,7 +1081,8 @@ function goBack() {
           : Math.max(detectedFrames - 1, 0);
 
         const liaOk    = detectedFrames >= CONFIRM_FRAMES;
-        const showUnknown = !liaOk && unknownFound;
+        // Saat Lia sedang dikonfirmasi/ketemu, JANGAN tampilkan unknown sama sekali
+        const showUnknown = !liaOk && unknownFound && !liaFound;
 
         // ── Transisi: Lia baru ketemu ──
         if (liaOk && !wasLiaOk) {
@@ -1097,6 +1100,7 @@ function goBack() {
         wasLiaOk   = liaOk;
         wasUnknown = showUnknown;
 
+        // Lia menang prioritas: kalau liaOk, paksa unknown hilang total
         overlayMsg.style.opacity     = liaOk       ? '1' : '0';
         overlayUnknown.style.opacity = showUnknown ? '1' : '0';
         camWrap.classList.toggle('detected', liaOk);
