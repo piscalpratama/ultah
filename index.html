@@ -527,24 +527,24 @@
 // ══════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════
-// function isToday() {
-//   const now = new Date();
-//   return now.getMonth() === 5 && now.getDate() === 29;
-// }
-
-// function getTarget() {
-//   const now = new Date();
-//   let t = new Date(now.getFullYear(), 5, 29, 0, 0, 0);
-//   if (now >= t) t = new Date(now.getFullYear() + 1, 5, 29, 0, 0, 0);
-//   return t;
-// }
+// ══════════════════════════════════════════════════════
+// CONFIG — ubah untuk ujicoba, revert sebelum deploy
+// ══════════════════════════════════════════════════════
+const TEST_MODE = true; // true = langsung unlock seperti hari H
+const TEST_COUNTDOWN_SECONDS = 5; // > 0 = countdown N detik lalu unlock (misal: 10)
 
 function isToday() {
-  return true; // hapus setelah test
+  if (TEST_MODE) return true;
+  const now = new Date();
+  return now.getMonth() === 5 && now.getDate() === 29;
 }
 
 function getTarget() {
-  return new Date(Date.now() + 10000); // countdown 10 detik
+  if (TEST_COUNTDOWN_SECONDS > 0) return new Date(Date.now() + TEST_COUNTDOWN_SECONDS * 1000);
+  const now = new Date();
+  let t = new Date(now.getFullYear(), 5, 29, 0, 0, 0);
+  if (now >= t) t = new Date(now.getFullYear() + 1, 5, 29, 0, 0, 0);
+  return t;
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -722,13 +722,11 @@ function goBack() {
   async function loadModels() {
     status.textContent = 'Memuat model pengenalan wajah…';
     try {
-      await Promise.all([
       const modelBase = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/models';
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(modelBase),
         faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelBase),
         faceapi.nets.faceRecognitionNet.loadFromUri(modelBase),
-      ]);
       ]);
       modelsLoaded = true; return true;
     } catch {
