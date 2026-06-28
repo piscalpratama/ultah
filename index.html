@@ -530,22 +530,21 @@
 // ══════════════════════════════════════════════════════
 // CONFIG — ubah untuk ujicoba, revert sebelum deploy
 // ══════════════════════════════════════════════════════
-const TEST_MODE = true; // true = langsung unlock seperti hari H
-const TEST_COUNTDOWN_SECONDS = 5; // > 0 = countdown N detik lalu unlock (misal: 10)
+const TEST_MODE = false; // true = langsung unlock seperti hari H
+const TEST_COUNTDOWN_SECONDS = 15; // > 0 = countdown N detik lalu unlock (misal: 10)
+
+const _target = TEST_COUNTDOWN_SECONDS > 0
+  ? new Date(Date.now() + TEST_COUNTDOWN_SECONDS * 1000)
+  : (() => { const now = new Date(); let t = new Date(now.getFullYear(), 5, 29, 0, 0, 0); if (now >= t) t = new Date(now.getFullYear() + 1, 5, 29, 0, 0, 0); return t; })();
 
 function isToday() {
   if (TEST_MODE) return true;
+  if (TEST_COUNTDOWN_SECONDS > 0) return Date.now() >= _target.getTime();
   const now = new Date();
   return now.getMonth() === 5 && now.getDate() === 29;
 }
 
-function getTarget() {
-  if (TEST_COUNTDOWN_SECONDS > 0) return new Date(Date.now() + TEST_COUNTDOWN_SECONDS * 1000);
-  const now = new Date();
-  let t = new Date(now.getFullYear(), 5, 29, 0, 0, 0);
-  if (now >= t) t = new Date(now.getFullYear() + 1, 5, 29, 0, 0, 0);
-  return t;
-}
+function getTarget() { return _target; }
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -577,7 +576,10 @@ function pad(n) { return String(n).padStart(2, '0'); }
   const btnHint = document.getElementById('btn-hint');
   const label   = document.getElementById('countdown-label');
 
+  let unlocked = false;
   function unlock() {
+    if (unlocked) return;
+    unlocked = true;
     btn.disabled = false;
     btn.classList.add('unlocked');
     btnIcon.textContent = '🌹';
