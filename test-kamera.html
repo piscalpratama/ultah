@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tes Kamera – Pengenalan Wajah</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:      #0a0a1a;
+      --navy2:     #12122a;
+      --rose-gold: #c9956c;
+      --blush:     #f5d0c5;
+      --warm-white:#fdf6f0;
+      --muted:     rgba(245,208,197,0.45);
+      --success:   #6fcf97;
+      --error:     #eb5757;
+    }
+
+    body {
+      background: var(--navy);
+      color: var(--warm-white);
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 32px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .back-link {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--rose-gold);
+      text-decoration: none;
+      margin-bottom: 24px;
+      opacity: 0.8;
+    }
+    .back-link:hover { opacity: 1; }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 300;
+      text-align: center;
+    }
+    h1 em { font-style: italic; color: var(--blush); }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      margin: 8px 0 28px;
+      line-height: 1.6;
+    }
+
+    /* Badge mode */
+    .mode-badge {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--rose-gold);
+      border: 1px solid rgba(201,149,108,0.4);
+      border-radius: 100px;
+      padding: 4px 12px;
+      margin-bottom: 20px;
+    }
+
+    /* Camera */
+    #camera-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--navy2);
+      border: 1px solid rgba(201,149,108,0.2);
+      box-shadow: 0 0 60px rgba(201,149,108,0.08);
+      aspect-ratio: 3/4;
+    }
+
+    #video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1);
+      transition: filter 0.5s ease;
+    }
+
+    #face-canvas { position: absolute; inset: 0; transform: scaleX(-1); }
+    #fx-canvas   { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+
+    #overlay-msg {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding-bottom: 24px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    .overlay-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-style: italic;
+      color: #fff;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.7), 0 0 40px rgba(201,149,108,0.5);
+      text-align: center;
+    }
+    .overlay-name .word {
+      display: inline-block; opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      margin-right: 0.25em;
+    }
+    .overlay-name .word.show { opacity: 1; transform: translateY(0); }
+    .overlay-sub {
+      font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--blush); text-shadow: 0 1px 12px rgba(0,0,0,0.8); margin-top: 5px;
+    }
+
+    #overlay-unknown {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding-bottom: 24px;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.6s ease; z-index: 4;
+    }
+    #overlay-unknown.shake .unknown-name { animation: soft-shake 0.4s ease; }
+    .unknown-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.1rem, 3.5vw, 1.6rem); font-style: italic;
+      color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,0.8); text-align: center;
+    }
+    .unknown-sub {
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(245,208,197,0.7); text-shadow: 0 1px 12px rgba(0,0,0,0.8); margin-top: 5px;
+    }
+
+    @keyframes wrap-pulse {
+      0%, 100% { box-shadow: 0 0 50px rgba(201,149,108,0.25), 0 0 0 2px rgba(201,149,108,0.2); }
+      50%       { box-shadow: 0 0 90px rgba(201,149,108,0.55), 0 0 0 3px rgba(201,149,108,0.4); }
+    }
+    @keyframes soft-shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+
+    #camera-wrap.detected {
+      border-color: rgba(201,149,108,0.7);
+      animation: wrap-pulse 2s ease-in-out infinite;
+    }
+    #camera-wrap.detected::after {
+      content: ''; position: absolute; inset: 0;
+      pointer-events: none; z-index: 2;
+      box-shadow: inset 0 0 80px 20px rgba(201,149,108,0.25);
+    }
+    #camera-wrap.unknown { border-color: rgba(255,255,255,0.15); }
+    #camera-wrap.unknown #video { filter: saturate(0.4) brightness(0.7); }
+
+    #cam-status {
+      text-align: center; font-size: 12px; color: var(--muted);
+      margin-top: 14px; letter-spacing: 0.04em; min-height: 18px;
+    }
+
+    /* DIAGNOSTIK — khusus halaman tes */
+    #diag {
+      width: 100%; max-width: 360px;
+      margin-top: 16px;
+      background: var(--navy2);
+      border: 1px solid rgba(201,149,108,0.18);
+      border-radius: 12px;
+      padding: 16px 18px;
+      font-size: 12px;
+      line-height: 1.9;
+    }
+    #diag .row { display: flex; justify-content: space-between; gap: 12px; }
+    #diag .label { color: var(--muted); }
+    #diag .val { font-family: monospace; color: var(--warm-white); }
+    #diag .val.good { color: var(--success); }
+    #diag .val.bad  { color: var(--error); }
+
+    /* meter jarak */
+    .dist-bar {
+      height: 6px; border-radius: 3px;
+      background: rgba(255,255,255,0.08);
+      margin-top: 6px; overflow: hidden; position: relative;
+    }
+    .dist-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 0.2s ease, background 0.2s ease;
+      width: 0%;
+    }
+    .dist-threshold {
+      position: absolute; top: -2px; bottom: -2px; width: 2px;
+      background: var(--rose-gold); opacity: 0.7;
+    }
+
+    #start-cam-btn {
+      display: block; margin: 18px auto 0;
+      padding: 12px 30px;
+      background: rgba(201,149,108,0.12);
+      border: 1px solid var(--rose-gold);
+      border-radius: 100px;
+      color: var(--rose-gold);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase;
+      cursor: pointer; transition: all 0.3s;
+    }
+    #start-cam-btn:hover { background: rgba(201,149,108,0.2); }
+    #start-cam-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #no-faces-warn {
+      display: none;
+      background: rgba(235,87,87,0.08);
+      border: 1px solid rgba(235,87,87,0.3);
+      border-radius: 12px; padding: 14px 18px; margin-top: 16px;
+      font-size: 12px; color: #f5b5b5; line-height: 1.7; text-align: center;
+      max-width: 360px;
+    }
+    #no-faces-warn a { color: var(--rose-gold); }
+
+    .tune-note {
+      max-width: 360px; margin-top: 20px;
+      font-size: 11px; color: var(--muted); line-height: 1.8; text-align: center;
+    }
+    .tune-note code {
+      font-family: monospace; background: rgba(255,255,255,0.06);
+      padding: 1px 5px; border-radius: 4px; color: var(--blush);
+    }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="index.html">← Kembali</a>
+
+  <span class="mode-badge">Halaman Tes</span>
+  <h1>Tes <em>Pengenalan Wajah</em></h1>
+  <p class="subtitle">
+    Cek apakah kamera mengenali wajah dengan benar.<br>
+    Angka jarak di bawah membantu kalibrasi threshold.
+  </p>
+
+  <div id="camera-wrap">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="face-canvas"></canvas>
+    <canvas id="fx-canvas"></canvas>
+    <div id="overlay-msg">
+      <div class="overlay-name" id="overlay-name-text">Terdeteksi! ✨</div>
+      <div class="overlay-sub">Wajah cocok</div>
+    </div>
+    <div id="overlay-unknown">
+      <div class="unknown-name">Bukan target 🌹</div>
+      <div class="unknown-sub">Wajah tidak cocok</div>
+    </div>
+  </div>
+
+  <p id="cam-status">Menyalakan kamera…</p>
+
+  <!-- DIAGNOSTIK -->
+  <div id="diag">
+    <div class="row"><span class="label">Status model</span><span class="val" id="d-model">memuat…</span></div>
+    <div class="row"><span class="label">Data wajah</span><span class="val" id="d-facedata">memuat…</span></div>
+    <div class="row"><span class="label">Wajah terdeteksi</span><span class="val" id="d-count">0</span></div>
+    <div class="row"><span class="label">Hasil terbaik</span><span class="val" id="d-label">—</span></div>
+    <div class="row"><span class="label">Jarak (makin kecil makin cocok)</span><span class="val" id="d-dist">—</span></div>
+    <div class="dist-bar">
+      <div class="dist-fill" id="d-bar"></div>
+      <div class="dist-threshold" id="d-thresh"></div>
+    </div>
+    <div class="row" style="margin-top:10px"><span class="label">Threshold aktif</span><span class="val" id="d-threshval">—</span></div>
+  </div>
+
+  <div id="no-faces-warn">
+    Data wajah belum ada. Buka <a href="setup.html">halaman setup</a> dan upload <code>faces.json</code> dulu.
+  </div>
+
+  <button id="start-cam-btn">Mulai Ulang Kamera</button>
+
+  <p class="tune-note">
+    Kalau wajah target sering tidak cocok, naikkan <code>THRESHOLD</code> di <code>index.html</code>.<br>
+    Kalau orang lain malah cocok, turunkan. Patokan: jarak target biasanya di bawah threshold.
+  </p>
+
+<script>
+(function() {
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+  document.head.appendChild(script);
+
+  const video      = document.getElementById('video');
+  const faceCanvas = document.getElementById('face-canvas');
+  const fxCanvas   = document.getElementById('fx-canvas');
+  const overlayMsg     = document.getElementById('overlay-msg');
+  const overlayUnknown = document.getElementById('overlay-unknown');
+  const overlayNameText = document.getElementById('overlay-name-text');
+  const camWrap    = document.getElementById('camera-wrap');
+  const status     = document.getElementById('cam-status');
+  const btn        = document.getElementById('start-cam-btn');
+  const noFacesEl  = document.getElementById('no-faces-warn');
+
+  // Diagnostik els
+  const dModel    = document.getElementById('d-model');
+  const dFaceData = document.getElementById('d-facedata');
+  const dCount    = document.getElementById('d-count');
+  const dLabel    = document.getElementById('d-label');
+  const dDist     = document.getElementById('d-dist');
+  const dBar      = document.getElementById('d-bar');
+  const dThresh   = document.getElementById('d-thresh');
+  const dThreshVal= document.getElementById('d-threshval');
+
+  // ── SAMAKAN DENGAN index.html ──
+  const THRESHOLD     = 0.55;
+  const CONFIRM_FRAMES = 3;
+  const TARGET_LABEL  = 'Lia';
+
+  dThreshVal.textContent = THRESHOLD.toFixed(2);
+  dThresh.style.left = (THRESHOLD / 1.0 * 100) + '%'; // bar skala 0–1.0
+
+  let faceMatcher    = null;
+  let modelsLoaded   = false;
+  let detecting      = false;
+  let detectedFrames = 0;
+  let wasLiaOk = false, wasUnknown = false;
+
+  // ── FX engine (sama seperti index) ──
+  const fxCtx = fxCanvas.getContext('2d');
+  const fxParts = [];
+  function sizeFx() { fxCanvas.width = camWrap.clientWidth; fxCanvas.height = camWrap.clientHeight; }
+  const PETAL_COLORS = ['#c9956c','#f5d0c5','#e8b4a0','#d4a090','#fdf6f0','#e8a0b0'];
+  function spawnBurst() {
+    sizeFx();
+    const W = fxCanvas.width, H = fxCanvas.height;
+    for (let i = 0; i < 50; i++) fxParts.push({ type:'petal', x:W/2+(Math.random()-0.5)*80, y:H+10, vx:(Math.random()-0.5)*7, vy:-6-Math.random()*7, g:0.15+Math.random()*0.1, r:4+Math.random()*6, angle:Math.random()*Math.PI*2, dAngle:(Math.random()-0.5)*0.2, alpha:1, color:PETAL_COLORS[Math.floor(Math.random()*PETAL_COLORS.length)], life:1 });
+    for (let i = 0; i < 12; i++) fxParts.push({ type:'heart', x:Math.random()*W, y:H+Math.random()*40, vx:(Math.random()-0.5)*0.8, vy:-1-Math.random()*1.5, g:0, r:8+Math.random()*10, angle:0, dAngle:0, alpha:0.9, color:'#e8a0b0', life:1, sway:Math.random()*Math.PI*2 });
+  }
+  function drawHeart(ctx,x,y,size,color,alpha) {
+    ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color; ctx.translate(x,y); ctx.scale(size/16,size/16);
+    ctx.beginPath(); ctx.moveTo(0,4); ctx.bezierCurveTo(-8,-6,-16,4,0,14); ctx.bezierCurveTo(16,4,8,-6,0,4); ctx.fill(); ctx.restore();
+  }
+  function fxLoop() {
+    fxCtx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+    for (let i=fxParts.length-1;i>=0;i--) {
+      const p=fxParts[i];
+      p.x+=p.vx; p.vy+=p.g; p.y+=p.vy; p.angle+=p.dAngle;
+      if (p.type==='heart'){ p.sway+=0.05; p.x+=Math.sin(p.sway)*0.6; p.life-=0.008; } else { p.life-=0.012; }
+      p.alpha=Math.max(0,p.life);
+      if (p.type==='heart') drawHeart(fxCtx,p.x,p.y,p.r,p.color,p.alpha);
+      else { fxCtx.save(); fxCtx.translate(p.x,p.y); fxCtx.rotate(p.angle); fxCtx.globalAlpha=p.alpha; fxCtx.fillStyle=p.color; fxCtx.beginPath(); fxCtx.ellipse(0,0,p.r,p.r*1.5,0,0,Math.PI*2); fxCtx.fill(); fxCtx.restore(); }
+      if (p.life<=0 || p.y>fxCanvas.height+30) fxParts.splice(i,1);
+    }
+    requestAnimationFrame(fxLoop);
+  }
+  fxLoop();
+
+  let audioCtx=null;
+  function playChime() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+      const now=audioCtx.currentTime;
+      [523.25,659.25,783.99,1046.50].forEach((freq,i)=>{
+        const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
+        osc.type='sine'; osc.frequency.value=freq;
+        const t=now+i*0.12;
+        gain.gain.setValueAtTime(0,t); gain.gain.linearRampToValueAtTime(0.18,t+0.04); gain.gain.exponentialRampToValueAtTime(0.001,t+1.1);
+        osc.connect(gain).connect(audioCtx.destination); osc.start(t); osc.stop(t+1.2);
+      });
+    } catch {}
+  }
+  function setupWords() {
+    const text = overlayNameText.textContent.trim();
+    overlayNameText.innerHTML = text.split(' ').map(w=>`<span class="word">${w}</span>`).join(' ');
+  }
+  function revealWords(){ overlayNameText.querySelectorAll('.word').forEach((w,i)=>setTimeout(()=>w.classList.add('show'),i*120)); }
+  function resetWords(){ overlayNameText.querySelectorAll('.word').forEach(w=>w.classList.remove('show')); }
+  setupWords();
+  function celebrate(){ spawnBurst(); playChime(); revealWords(); setTimeout(spawnBurst,400); }
+
+  async function loadFaceData() {
+    try {
+      const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+      const r = await fetch(base + '/faces.json');
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      const labeled = data.map(d => new faceapi.LabeledFaceDescriptors(d.label, d.descriptors.map(a => new Float32Array(a))));
+      faceMatcher = new faceapi.FaceMatcher(labeled, THRESHOLD);
+      dFaceData.textContent = `${data.length} label, ${data[0]?.descriptors?.length||0} foto`;
+      dFaceData.className = 'val good';
+      return true;
+    } catch {
+      dFaceData.textContent = 'tidak ada';
+      dFaceData.className = 'val bad';
+      return false;
+    }
+  }
+
+  async function loadModels() {
+    try {
+      const modelBase = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/models';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(modelBase),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelBase),
+        faceapi.nets.faceRecognitionNet.loadFromUri(modelBase),
+      ]);
+      modelsLoaded = true;
+      dModel.textContent = 'OK'; dModel.className = 'val good';
+      return true;
+    } catch {
+      dModel.textContent = 'gagal'; dModel.className = 'val bad';
+      return false;
+    }
+  }
+
+  async function start() {
+    btn.disabled = true;
+    status.textContent = 'Menyiapkan…';
+    let waited = 0;
+    while (typeof faceapi === 'undefined' && waited < 6000) { await new Promise(r=>setTimeout(r,300)); waited+=300; }
+    if (typeof faceapi === 'undefined') { status.textContent='Gagal load library. Cek internet.'; btn.disabled=false; return; }
+
+    const [modelOk, faceOk] = await Promise.all([loadModels(), loadFaceData()]);
+    if (!faceOk) noFacesEl.style.display = 'block';
+    if (!modelOk) { status.textContent='Gagal memuat model.'; btn.disabled=false; return; }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:{ideal:640} } });
+      video.srcObject = stream;
+      await video.play();
+      status.textContent = faceOk ? 'Mendeteksi…' : 'Mode demo (tanpa data wajah)';
+      detecting = false; wasLiaOk = false; wasUnknown = false; detectedFrames = 0; resetWords();
+      startDetection();
+      btn.textContent = 'Mulai Ulang Kamera';
+      btn.disabled = false;
+    } catch {
+      status.textContent = 'Tidak bisa akses kamera. Periksa izin.';
+      btn.disabled = false;
+    }
+  }
+
+  async function startDetection() {
+    if (detecting) return;
+    detecting = true;
+    const sz = { width: video.videoWidth, height: video.videoHeight };
+    faceapi.matchDimensions(faceCanvas, sz);
+
+    async function detect() {
+      if (!video.paused && video.videoWidth > 0) {
+        const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+        const dets = await faceapi.detectAllFaces(video, opts).withFaceLandmarks(true).withFaceDescriptors();
+        const res  = faceapi.resizeResults(dets, sz);
+        const ctx  = faceCanvas.getContext('2d');
+        ctx.clearRect(0,0,faceCanvas.width,faceCanvas.height);
+
+        dCount.textContent = dets.length;
+
+        let liaFound = false, unknownFound = false;
+        let bestLabel = '—', bestDist = null;
+
+        res.forEach(d => {
+          let isLia = false;
+          if (faceMatcher) {
+            const m = faceMatcher.findBestMatch(d.descriptor);
+            isLia = m.label === TARGET_LABEL && m.distance < THRESHOLD;
+            // simpan jarak terkecil untuk diagnostik
+            if (bestDist === null || m.distance < bestDist) { bestDist = m.distance; bestLabel = m.label; }
+          } else { isLia = true; }
+
+          const { x, y, width: w, height: h } = d.detection.box;
+          const cs = 18;
+          ctx.save();
+          ctx.strokeStyle = isLia ? 'rgba(201,149,108,0.85)' : 'rgba(255,255,255,0.25)';
+          ctx.lineWidth = isLia ? 2 : 1;
+          ctx.setLineDash([6,4]);
+          [
+            [[x,y],[x+cs,y],[x,y],[x,y+cs]],
+            [[x+w-cs,y],[x+w,y],[x+w,y],[x+w,y+cs]],
+            [[x,y+h-cs],[x,y+h],[x,y+h],[x+cs,y+h]],
+            [[x+w-cs,y+h],[x+w,y+h],[x+w,y+h],[x+w,y+h-cs]],
+          ].forEach(([[x1,y1],[x2,y2],[x3,y3],[x4,y4]]) => {
+            ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x3,y3); ctx.lineTo(x4,y4); ctx.stroke();
+          });
+          ctx.restore();
+          if (isLia) liaFound = true; else unknownFound = true;
+        });
+
+        // Diagnostik jarak
+        if (bestDist !== null) {
+          dLabel.textContent = bestLabel;
+          dLabel.className = 'val ' + (bestLabel === TARGET_LABEL && bestDist < THRESHOLD ? 'good' : '');
+          dDist.textContent = bestDist.toFixed(3);
+          const pct = Math.min(bestDist / 1.0 * 100, 100);
+          dBar.style.width = pct + '%';
+          dBar.style.background = bestDist < THRESHOLD ? 'var(--success)' : 'var(--error)';
+        } else {
+          dLabel.textContent = '—'; dLabel.className = 'val';
+          dDist.textContent = '—'; dBar.style.width = '0%';
+        }
+
+        detectedFrames = liaFound
+          ? Math.min(detectedFrames + 1, CONFIRM_FRAMES + 1)
+          : Math.max(detectedFrames - 1, 0);
+
+        const liaOk = detectedFrames >= CONFIRM_FRAMES;
+        const showUnknown = !liaOk && unknownFound && !liaFound;
+
+        if (liaOk && !wasLiaOk) celebrate();
+        if (!liaOk && wasLiaOk) resetWords();
+        if (showUnknown && !wasUnknown) {
+          overlayUnknown.classList.remove('shake');
+          void overlayUnknown.offsetWidth;
+          overlayUnknown.classList.add('shake');
+        }
+        wasLiaOk = liaOk; wasUnknown = showUnknown;
+
+        overlayMsg.style.opacity     = liaOk ? '1' : '0';
+        overlayUnknown.style.opacity = showUnknown ? '1' : '0';
+        camWrap.classList.toggle('detected', liaOk);
+        camWrap.classList.toggle('unknown', showUnknown);
+
+        status.textContent = liaOk ? '✨ Cocok!'
+          : showUnknown ? 'Bukan target'
+          : dets.length === 0 ? 'Mencari wajah…' : 'Memproses…';
+      }
+      requestAnimationFrame(detect);
+    }
+    detect();
+  }
+
+  // Auto-start saat halaman dibuka
+  start();
+  btn.addEventListener('click', () => {
+    // restart kamera
+    if (video.srcObject) video.srcObject.getTracks().forEach(t=>t.stop());
+    detecting = false;
+    start();
+  });
+})();
+</script>
+
+</body>
+</html>
