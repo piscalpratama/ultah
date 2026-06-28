@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Selamat Ulang Tahun, Lia 🌹</title>
+  <title>Untuk Istriku 🌹</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet" />
   <style>
@@ -339,6 +339,36 @@
       transform: scaleX(-1);
     }
 
+    #fx-canvas {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    /* word-by-word fade untuk overlay name */
+    .overlay-name .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      margin-right: 0.25em;
+    }
+    .overlay-name .word.show { opacity: 1; transform: translateY(0); }
+
+    /* glow berdenyut kuat saat detected */
+    @keyframes wrap-pulse {
+      0%, 100% { box-shadow: 0 0 50px rgba(201,149,108,0.25), 0 0 0 2px rgba(201,149,108,0.2); }
+      50%       { box-shadow: 0 0 90px rgba(201,149,108,0.55), 0 0 0 3px rgba(201,149,108,0.4); }
+    }
+
+    /* shake halus saat unknown */
+    @keyframes soft-shake {
+      0%, 100% { transform: translateX(0); }
+      25%       { transform: translateX(-3px); }
+      75%       { transform: translateX(3px); }
+    }
+
     #overlay-msg {
       position: absolute;
       inset: 0;
@@ -370,9 +400,64 @@
     }
 
     #camera-wrap.detected {
-      border-color: rgba(201,149,108,0.6);
-      box-shadow: 0 0 60px rgba(201,149,108,0.25), 0 0 0 2px rgba(201,149,108,0.15);
+      border-color: rgba(201,149,108,0.7);
+      animation: wrap-pulse 2s ease-in-out infinite;
     }
+
+    /* warm vignette saat detected */
+    #camera-wrap.detected::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      box-shadow: inset 0 0 80px 20px rgba(201,149,108,0.25);
+    }
+
+    #overlay-unknown {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 24px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      z-index: 4;
+    }
+
+    #overlay-unknown.shake .unknown-name {
+      animation: soft-shake 0.4s ease;
+    }
+
+    .unknown-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+      font-style: italic;
+      color: #fff;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+    }
+
+    .unknown-sub {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(245,208,197,0.7);
+      text-shadow: 0 1px 12px rgba(0,0,0,0.8);
+      margin-top: 5px;
+    }
+
+    #camera-wrap.unknown {
+      border-color: rgba(255,255,255,0.15);
+      box-shadow: 0 0 40px rgba(255,255,255,0.04);
+    }
+    #camera-wrap.unknown #video {
+      filter: saturate(0.4) brightness(0.7);
+      transition: filter 0.5s ease;
+    }
+    #video { transition: filter 0.5s ease; }
 
     #cam-status {
       text-align: center;
@@ -499,14 +584,19 @@
     <button class="back-btn" onclick="goBack()">← Kembali</button>
 
     <p class="cam-eyebrow">Senyum dulu ke sini</p>
-    <h2 class="cam-title">Hei, Lia 🌸</h2>
+    <h2 class="cam-title">Hei, istriku 🌸</h2>
 
     <div id="camera-wrap">
       <video id="video" autoplay muted playsinline></video>
       <canvas id="face-canvas"></canvas>
+      <canvas id="fx-canvas"></canvas>
       <div id="overlay-msg">
-        <div class="overlay-name">Selamat Ulang Tahun, sayang ✨</div>
+        <div class="overlay-name" id="overlay-name-text">Selamat Ulang Tahun, sayang ✨</div>
         <div class="overlay-sub">Happy Birthday · 29 Juni</div>
+      </div>
+      <div id="overlay-unknown">
+        <div class="unknown-name">Maaf, kamu bukan orangnya 🌹</div>
+        <div class="unknown-sub">Halaman ini hanya untuk satu orang istimewa</div>
       </div>
     </div>
 
@@ -530,8 +620,8 @@
 // ══════════════════════════════════════════════════════
 // CONFIG — ubah untuk ujicoba, revert sebelum deploy
 // ══════════════════════════════════════════════════════
-const TEST_MODE = false; // true = langsung unlock seperti hari H
-const TEST_COUNTDOWN_SECONDS = 15; // > 0 = countdown N detik lalu unlock (misal: 10)
+const TEST_MODE = true; // true = langsung unlock seperti hari H
+const TEST_COUNTDOWN_SECONDS = 0; // > 0 = countdown N detik lalu unlock (misal: 10)
 
 const _target = TEST_COUNTDOWN_SECONDS > 0
   ? new Date(Date.now() + TEST_COUNTDOWN_SECONDS * 1000)
@@ -694,7 +784,10 @@ function goBack() {
 
   const video      = document.getElementById('video');
   const faceCanvas = document.getElementById('face-canvas');
-  const overlayMsg = document.getElementById('overlay-msg');
+  const overlayMsg     = document.getElementById('overlay-msg');
+  const overlayUnknown = document.getElementById('overlay-unknown');
+  const overlayNameText = document.getElementById('overlay-name-text');
+  const fxCanvas       = document.getElementById('fx-canvas');
   const camWrap    = document.getElementById('camera-wrap');
   const status     = document.getElementById('cam-status');
   const btn        = document.getElementById('start-cam-btn');
@@ -706,6 +799,163 @@ function goBack() {
   let detectedFrames = 0;
   const THRESHOLD     = 0.45;
   const CONFIRM_FRAMES = 4;
+
+  // Celebration state
+  let celebrated   = false; // chime + word-fade sekali per sesi temu
+  let wasLiaOk     = false;
+  let wasUnknown   = false;
+
+  // ── FX ENGINE (confetti + hearts) ──
+  const fxCtx   = fxCanvas.getContext('2d');
+  const fxParts = [];
+
+  function sizeFx() {
+    fxCanvas.width  = camWrap.clientWidth;
+    fxCanvas.height = camWrap.clientHeight;
+  }
+
+  const PETAL_COLORS = ['#c9956c','#f5d0c5','#e8b4a0','#d4a090','#fdf6f0','#e8a0b0'];
+
+  function spawnBurst() {
+    sizeFx();
+    const W = fxCanvas.width, H = fxCanvas.height;
+    // Confetti/kelopak meledak dari bawah
+    for (let i = 0; i < 60; i++) {
+      fxParts.push({
+        type: 'petal',
+        x: W / 2 + (Math.random() - 0.5) * 80,
+        y: H + 10,
+        vx: (Math.random() - 0.5) * 7,
+        vy: -6 - Math.random() * 7,
+        g: 0.15 + Math.random() * 0.1,
+        r: 4 + Math.random() * 6,
+        angle: Math.random() * Math.PI * 2,
+        dAngle: (Math.random() - 0.5) * 0.2,
+        alpha: 1,
+        color: PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)],
+        life: 1,
+      });
+    }
+    // Heart particles mengambang naik
+    for (let i = 0; i < 14; i++) {
+      fxParts.push({
+        type: 'heart',
+        x: Math.random() * W,
+        y: H + Math.random() * 40,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -1 - Math.random() * 1.5,
+        g: 0,
+        r: 8 + Math.random() * 10,
+        angle: 0, dAngle: 0,
+        alpha: 0.9,
+        color: '#e8a0b0',
+        life: 1,
+        sway: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  function drawHeart(ctx, x, y, size, color, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.translate(x, y);
+    ctx.scale(size / 16, size / 16);
+    ctx.beginPath();
+    ctx.moveTo(0, 4);
+    ctx.bezierCurveTo(-8, -6, -16, 4, 0, 14);
+    ctx.bezierCurveTo(16, 4, 8, -6, 0, 4);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function fxLoop() {
+    fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+    for (let i = fxParts.length - 1; i >= 0; i--) {
+      const p = fxParts[i];
+      p.x += p.vx;
+      p.vy += p.g;
+      p.y += p.vy;
+      p.angle += p.dAngle;
+      if (p.type === 'heart') {
+        p.sway += 0.05;
+        p.x += Math.sin(p.sway) * 0.6;
+        p.life -= 0.008;
+      } else {
+        p.life -= 0.012;
+      }
+      p.alpha = Math.max(0, p.life);
+
+      if (p.type === 'heart') {
+        drawHeart(fxCtx, p.x, p.y, p.r, p.color, p.alpha);
+      } else {
+        fxCtx.save();
+        fxCtx.translate(p.x, p.y);
+        fxCtx.rotate(p.angle);
+        fxCtx.globalAlpha = p.alpha;
+        fxCtx.fillStyle = p.color;
+        fxCtx.beginPath();
+        fxCtx.ellipse(0, 0, p.r, p.r * 1.5, 0, 0, Math.PI * 2);
+        fxCtx.fill();
+        fxCtx.restore();
+      }
+
+      if (p.life <= 0 || p.y > fxCanvas.height + 30) fxParts.splice(i, 1);
+    }
+    requestAnimationFrame(fxLoop);
+  }
+  fxLoop();
+
+  // ── CHIME (Web Audio, no file) ──
+  let audioCtx = null;
+  function playChime() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      // Arpeggio lembut: C5 - E5 - G5 - C6
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, i) => {
+        const osc  = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const t = now + i * 0.12;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.18, t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 1.2);
+      });
+    } catch {}
+  }
+
+  // ── Word-by-word fade untuk ucapan ──
+  function setupWords() {
+    const text = overlayNameText.textContent.trim();
+    overlayNameText.innerHTML = text.split(' ')
+      .map(w => `<span class="word">${w}</span>`).join(' ');
+  }
+  function revealWords() {
+    const words = overlayNameText.querySelectorAll('.word');
+    words.forEach((w, i) => setTimeout(() => w.classList.add('show'), i * 120));
+  }
+  function resetWords() {
+    overlayNameText.querySelectorAll('.word').forEach(w => w.classList.remove('show'));
+  }
+  setupWords();
+
+  function celebrate() {
+    spawnBurst();
+    playChime();
+    revealWords();
+    // Burst kedua biar lebih meriah
+    setTimeout(spawnBurst, 400);
+  }
+
+  // Promise refs — preload di background
+  let modelsPromise   = null;
+  let faceDataPromise = null;
 
   async function loadFaceData() {
     try {
@@ -722,7 +972,6 @@ function goBack() {
   }
 
   async function loadModels() {
-    status.textContent = 'Memuat model pengenalan wajah…';
     try {
       const modelBase = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/models';
       await Promise.all([
@@ -732,15 +981,23 @@ function goBack() {
       ]);
       modelsLoaded = true; return true;
     } catch {
-      status.textContent = 'Gagal memuat model. Pastikan folder /models ada.';
       return false;
     }
   }
 
+  // Mulai preload segera setelah face-api.js siap
+  function startPreload() {
+    modelsPromise   = loadModels();
+    faceDataPromise = loadFaceData();
+  }
+
+  script.onload = () => startPreload();
+
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     status.textContent = 'Menyiapkan…';
-    // tunggu face-api siap
+
+    // Tunggu face-api siap (kalau belum)
     let waited = 0;
     while (typeof faceapi === 'undefined' && waited < 5000) {
       await new Promise(r => setTimeout(r, 300)); waited += 300;
@@ -750,16 +1007,26 @@ function goBack() {
       btn.disabled = false; return;
     }
 
-    const [modelOk, faceOk] = await Promise.all([loadModels(), loadFaceData()]);
+    // Kalau preload belum dimulai (edge case), mulai sekarang
+    if (!modelsPromise)   modelsPromise   = loadModels();
+    if (!faceDataPromise) faceDataPromise = loadFaceData();
+
+    // Tunggu keduanya — biasanya sudah selesai di background
+    if (!modelsLoaded) status.textContent = 'Memuat model…';
+    const [modelOk, faceOk] = await Promise.all([modelsPromise, faceDataPromise]);
+
     if (!faceOk) { noFacesEl.style.display = 'block'; status.textContent = 'Data wajah belum ada.'; }
-    if (!modelOk) { btn.disabled = false; return; }
+    if (!modelOk) {
+      status.textContent = 'Gagal memuat model. Pastikan folder /models ada.';
+      btn.disabled = false; return;
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } } });
       video.srcObject = stream;
       await video.play();
       btn.style.display = 'none';
-      status.textContent = faceOk ? 'Mencari wajah Lia…' : 'Mode demo aktif…';
+      status.textContent = faceOk ? 'Mencari wajah yang berulang tahun…' : 'Mode demo aktif…';
       startDetection();
     } catch {
       status.textContent = 'Tidak bisa akses kamera. Periksa izin browser ya.';
@@ -781,7 +1048,8 @@ function goBack() {
         const ctx  = faceCanvas.getContext('2d');
         ctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
 
-        let liaFound = false;
+        let liaFound     = false;
+        let unknownFound = false;
         res.forEach(d => {
           const isLia = faceMatcher
             ? (() => { const m = faceMatcher.findBestMatch(d.descriptor); return m.label === 'Lia' && m.distance < THRESHOLD; })()
@@ -803,17 +1071,40 @@ function goBack() {
           });
           ctx.restore();
           if (isLia) liaFound = true;
+          else unknownFound = true;
         });
 
         detectedFrames = liaFound
           ? Math.min(detectedFrames + 1, CONFIRM_FRAMES + 1)
           : Math.max(detectedFrames - 1, 0);
 
-        const ok = detectedFrames >= CONFIRM_FRAMES;
-        overlayMsg.style.opacity = ok ? '1' : '0';
-        camWrap.classList.toggle('detected', ok);
-        status.textContent = ok ? '✨ Ketemu kamu, sayang!'
-          : dets.length === 0 ? 'Mencari wajah Lia…' : 'Wajah terdeteksi…';
+        const liaOk    = detectedFrames >= CONFIRM_FRAMES;
+        const showUnknown = !liaOk && unknownFound;
+
+        // ── Transisi: Lia baru ketemu ──
+        if (liaOk && !wasLiaOk) {
+          celebrate();
+        }
+        if (!liaOk && wasLiaOk) {
+          resetWords(); // reset biar bisa fade lagi saat ketemu ulang
+        }
+        // ── Transisi: unknown baru muncul → shake sekali ──
+        if (showUnknown && !wasUnknown) {
+          overlayUnknown.classList.remove('shake');
+          void overlayUnknown.offsetWidth; // reflow biar animasi retrigger
+          overlayUnknown.classList.add('shake');
+        }
+        wasLiaOk   = liaOk;
+        wasUnknown = showUnknown;
+
+        overlayMsg.style.opacity     = liaOk       ? '1' : '0';
+        overlayUnknown.style.opacity = showUnknown ? '1' : '0';
+        camWrap.classList.toggle('detected', liaOk);
+        camWrap.classList.toggle('unknown', showUnknown);
+
+        status.textContent = liaOk        ? '✨ Ketemu kamu, sayang!'
+          : showUnknown                   ? 'Wajah tidak dikenali…'
+          : dets.length === 0             ? 'Mencari wajah yang berulang tahun…' : 'Memproses…';
       }
       requestAnimationFrame(detect);
     }
