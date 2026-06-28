@@ -620,8 +620,8 @@
 // ══════════════════════════════════════════════════════
 // CONFIG — ubah untuk ujicoba, revert sebelum deploy
 // ══════════════════════════════════════════════════════
-const TEST_MODE = true; // true = langsung unlock seperti hari H
-const TEST_COUNTDOWN_SECONDS = 0; // > 0 = countdown N detik lalu unlock (misal: 10)
+const TEST_MODE = false; // true = langsung unlock seperti hari H
+const TEST_COUNTDOWN_SECONDS = 5; // > 0 = countdown N detik lalu unlock (misal: 10)
 
 const _target = TEST_COUNTDOWN_SECONDS > 0
   ? new Date(Date.now() + TEST_COUNTDOWN_SECONDS * 1000)
@@ -797,8 +797,8 @@ function goBack() {
   let modelsLoaded   = false;
   let detecting      = false;
   let detectedFrames = 0;
-  const THRESHOLD     = 0.45;
-  const CONFIRM_FRAMES = 4;
+  const THRESHOLD     = 0.55; // 0.4 (ketat) – 0.6 (longgar). Naikkan kalau Lia susah kedetect
+  const CONFIRM_FRAMES = 3;   // jumlah frame konfirmasi sebelum trigger
 
   // Celebration state
   let celebrated   = false; // chime + word-fade sekali per sesi temu
@@ -1053,9 +1053,13 @@ function goBack() {
         let liaFound     = false;
         let unknownFound = false;
         res.forEach(d => {
-          const isLia = faceMatcher
-            ? (() => { const m = faceMatcher.findBestMatch(d.descriptor); return m.label === 'Lia' && m.distance < THRESHOLD; })()
-            : true;
+          let isLia = false;
+          if (faceMatcher) {
+            const m = faceMatcher.findBestMatch(d.descriptor);
+            isLia = m.label === 'Lia' && m.distance < THRESHOLD;
+          } else {
+            isLia = true;
+          }
           const { x, y, width: w, height: h } = d.detection.box;
           const cs = 18;
           ctx.save();
